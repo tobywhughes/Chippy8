@@ -1,0 +1,67 @@
+from array import array
+import numpy as np
+from bitstring import BitArray, Bits
+
+class Chip8:
+
+	def __init__(self):
+		self.fontset = array('H', 
+ 		[0xF0, 0x90, 0x90, 0x90, 0xF0, 
+	  	0x20, 0x60, 0x20, 0x20, 0x70, 
+	  	0xF0, 0x10, 0xF0, 0x80, 0xF0, 
+	    0xF0, 0x10, 0xF0, 0x10, 0xF0, 
+	    0x90, 0x90, 0xF0, 0x10, 0x10, 
+	    0xF0, 0x80, 0xF0, 0x10, 0xF0, 
+	    0xF0, 0x80, 0xF0, 0x90, 0xF0, 
+	    0xF0, 0x10, 0x20, 0x40, 0x40, 
+	    0xF0, 0x90, 0xF0, 0x90, 0xF0, 
+	    0xF0, 0x90, 0xF0, 0x10, 0xF0, 
+	    0xF0, 0x90, 0xF0, 0x90, 0x90, 
+	    0xE0, 0x90, 0xE0, 0x90, 0xE0, 
+	    0xF0, 0x80, 0x80, 0x80, 0xF0, 
+	    0xE0, 0x90, 0x90, 0x90, 0xE0, 
+	    0xF0, 0x80, 0xF0, 0x80, 0xF0, 
+	    0xF0, 0x80, 0xF0, 0x80, 0x80])
+
+	def initialize(self, pixels):
+		self.opcode = array('H', [0])
+		self.memory = bytearray([0x00 for x in range(4096)])
+		self.pc = 512
+		self.I = 0
+		self.sp = 0
+		#Init clear screen
+		graphics = [0 for x in range(pixels)]
+
+		#Fontset
+		for i in range(80):
+			self.memory[i] = self.fontset[i]
+
+		self.draw_flag = True
+
+	def load_game(self, file_name):
+		with open(file_name, "rb") as file:
+			byte, i = 1, 0
+			while byte:
+				byte = file.read(1)
+				try:
+					self.memory[512 + i] = BitArray(byte).uint
+				except:
+					self.memory[512 + i] = 0
+				i += 1
+
+		for i in range (512, 600):
+			print(self.memory[i])
+
+	def emulate_cycle(self):
+		p1 = Bits(uint = self.memory[self.pc])
+		print(p1.bytes)
+		p2 = BitArray(self.memory[self.pc + 1])
+		
+		pass
+
+	def set_keys(self):
+		pass
+
+if __name__ == "__main__":
+	from main import main_func
+	main_func()
