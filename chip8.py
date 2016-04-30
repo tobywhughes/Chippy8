@@ -1,6 +1,5 @@
 from array import array
 import numpy as np
-from bitstring import BitArray, Bits
 
 class Chip8:
 
@@ -24,13 +23,14 @@ class Chip8:
 	    0xF0, 0x80, 0xF0, 0x80, 0x80])
 
 	def initialize(self, pixels):
-		self.opcode = array('H', [0])
-		self.memory = bytearray([0x00 for x in range(4096)])
-		self.pc = 512
+		self.stack = []
+		self.opcode = 0
+		self.memory = [0] * 4096
+		self.pc = 0x200
 		self.I = 0
 		self.sp = 0
 		#Init clear screen
-		graphics = [0 for x in range(pixels)]
+		graphics = [0] * pixels
 
 		#Fontset
 		for i in range(80):
@@ -39,25 +39,22 @@ class Chip8:
 		self.draw_flag = True
 
 	def load_game(self, file_name):
-		with open(file_name, "rb") as file:
-			byte, i = 1, 0
-			while byte:
-				byte = file.read(1)
-				try:
-					self.memory[512 + i] = BitArray(byte).uint
-				except:
-					self.memory[512 + i] = 0
-				i += 1
-
-		for i in range (512, 600):
-			print(self.memory[i])
+		with open(file_name, "rb") as f:
+			byte = f.read()
+			for i in range(len(byte)):
+				self.memory[self.pc + i] = byte[i]
 
 	def emulate_cycle(self):
-		p1 = Bits(uint = self.memory[self.pc])
-		print(p1.bytes)
-		p2 = BitArray(self.memory[self.pc + 1])
+		#Gets opcode
+		self.opcode = self.memory[self.pc] << 8 | self.memory[self.pc + 1]
 		
-		pass
+		#Decodes
+		if(self.opcode & 0xF000 == 0x2000):
+			self.stack.append(self.pc)
+			self.pc = self.opcode & 0x0FFF
+		#Not currently made list
+		else:
+			print(hex(self.opcode))
 
 	def set_keys(self):
 		pass
