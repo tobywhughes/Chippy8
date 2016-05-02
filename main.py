@@ -30,9 +30,6 @@ def main_func(file_name):
 	#Emulation Loop
 	cycle_speed = 1.0/60
 	while True:
-		for event in pygame.event.get():
-			if event.type == pygame.QUIT: sys.exit()
-
 		my_chip8.emulate_cycle()
 
 		if(my_chip8.draw_flag):
@@ -51,8 +48,10 @@ def get_key_event(events, keys, my_chip8):
 			event_type = 1	
 		elif event.type == pygame.KEYUP:
 			event_type = 0
+		elif event.type == pygame.QUIT:
+			sys.exit(0)
+
 		if event_type == 0 or event_type == 1:
-			print(event.key)
 			if event.key in keys:
 				i = keys.index(event.key)
 				my_chip8.keys[i] = event_type

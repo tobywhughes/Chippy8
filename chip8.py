@@ -1,3 +1,4 @@
+import sys
 from array import array
 from random import randint, seed
 from time import time
@@ -57,8 +58,11 @@ class Chip8:
 	def emulate_cycle(self):
 		#Gets opcode
 		self.opcode = self.memory[self.pc] << 8 | self.memory[self.pc + 1]
-		print(hex(self.opcode))
-		print(hex(self.pc))
+		
+		#Uncomment for opcode debugging
+		#print(hex(self.opcode))
+		#print(hex(self.pc))
+
 		#Decodes opcode
 		vx = (self.opcode & 0x0F00) >> 8
 		vy = (self.opcode & 0x00F0) >> 4
@@ -75,7 +79,11 @@ class Chip8:
 			#OOEE
 			elif(self.opcode == 0x00EE):
 				self.pc = self.stack.pop()	
-			
+		
+			#0NNN
+			elif(self.opcode & 0x0F00 != 0x0000):
+				self.pc = (self.opcode & 0x0FFF) - 2
+				
 			#Not found:
 			else:
 				self.pc -= 2
@@ -97,6 +105,11 @@ class Chip8:
 		elif(self.opcode & 0xF000 == 0x4000):
 			if self.V[vx] != self.opcode & 0x00FF:
 				self.pc += 2
+
+		#5XY0
+		elif(self.opcode & 0xF000 == 0x5000):
+			if self.V[vx] == self.V[vy]:
+				self.pc += 2			
 
 		#6XNN
 		elif(self.opcode & 0xF000 == 0x6000):
@@ -131,7 +144,7 @@ class Chip8:
 					self.V[0xF] = 1
 				else:
 					self.V[0xF] = 0
-				self.V[vx] = self.V[vx] & 0xFF
+				self.V[vx] &= 0xFF
 
 			#8XY5
 			elif(l == 0x0005):
@@ -140,12 +153,26 @@ class Chip8:
 				else:
 					self.V[0xF] = 1
 				self.V[vx] -= self.V[vy]
-				self.V[vx] = self.V[vx] & 0xFF
+				self.V[vx] &= 0xFF
 
 			#8XY6
 			elif(l == 0x0006):
 				self.V[0xF] = self.V[vx] & 0x01
 				self.V[vx] = self.V[vx] >> 1
+
+			#8XY7
+			elif(l == 0x0007):
+				if self.V[vx] > self.V[vy]:
+					self.V[0xF] = 0
+				else:
+					self.V[0xF] = 1
+				self.V[vx] = self.V[vy] - self.V[vx]
+				self.V[vx] &= 0xFF
+
+			#8XYE
+			elif(l == 0x000E):
+				self.V[0xF] = self.V[vx] & 0x80
+				self.V[vx] = self.V[vx] << 1
 
 			else:
 				#Not found
@@ -159,7 +186,11 @@ class Chip8:
 		#ANNN
 		elif(self.opcode & 0xF000 == 0xA000):
 			self.I = self.opcode & 0x0FFF
-		
+	
+		#BNNN
+		elif(self.opcode & 0xF000 == 0xB000):
+			self.pc = (self.opcode & 0x0FFF) + self.V[0x0] - 2
+	
 		#CXNN
 		elif(self.opcode & 0xF000 == 0xC000):
 			rand_int = randint(0, 0xFF)
@@ -177,7 +208,7 @@ class Chip8:
 				pixel = self.memory[self.I + y]
 				for x in range(8):
 					i = xcord + x + ((y + ycord) * 64)
-					if pixel & (0x80 >> x) != 0 and not (y + ycord >= 32 or x + xcord - 1 >= 64):
+					if pixel & (0x80 >> x) != 0 and not (y + ycord  >= 32 or x + xcord >= 64):
 						if self.graphics[i] == 1:
 							self.V[0xF] = 1
 						self.graphics[i] ^= 1
@@ -188,7 +219,7 @@ class Chip8:
 		elif(self.opcode & 0xF000 == 0xE000):
 			#EX9E
 			if (self.opcode & 0x00FF == 0x009E):
-				if self.keys[self.V[vx] == 1]:
+				if self.keys[self.V[vx]] == 1:
 					self.pc += 2
 
 			#EXA1
@@ -241,7 +272,8 @@ class Chip8:
 				self.memory[self.I] = self.V[vx] // 100
 				self.memory[self.I + 1] = (self.V[vx] // 10) % 10
 				self.memory[self.I + 2] = (self.V[vx] % 100) % 10
-		
+	
+			#FX55	
 			elif(nn == 0x0055):
 				for n in range(vx + 1):
 					self.memory[self.I + n] = self.V[n]			
@@ -271,13 +303,11 @@ class Chip8:
 				self.delay_timer -= 1
 	
 			if self.sound_timer > 0:
+				sys.stdout.write("\a") 
 				self.sound_timer -= 1
 			
 			self.t_last = pytime
-		
 
-	def set_keys(self):
-		pass
 
 if __name__ == "__main__":
 	from main import main_func
