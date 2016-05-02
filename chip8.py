@@ -1,5 +1,6 @@
 from array import array
 from random import randint, seed
+from time import time
 
 class Chip8:
 
@@ -8,8 +9,8 @@ class Chip8:
  		[0xF0, 0x90, 0x90, 0x90, 0xF0, 
 	  	0x20, 0x60, 0x20, 0x20, 0x70, 
 	  	0xF0, 0x10, 0xF0, 0x80, 0xF0, 
-	    0xF0, 0x10, 0xF0, 0x10, 0xF0, 
-	    0x90, 0x90, 0xF0, 0x10, 0x10, 
+		0xF0, 0x10, 0xF0, 0x10, 0xF0, 
+	 	0x90, 0x90, 0xF0, 0x10, 0x10, 
 	    0xF0, 0x80, 0xF0, 0x10, 0xF0, 
 	    0xF0, 0x80, 0xF0, 0x90, 0xF0, 
 	    0xF0, 0x10, 0x20, 0x40, 0x40, 
@@ -35,6 +36,9 @@ class Chip8:
 		#Init clear screen
 		self.graphics = [0] * pixels
 
+		#Python timer
+		self.t_last = time()
+
 		#Fontset
 		for i in range(80):
 			self.memory[i] = self.fontset[i]
@@ -53,8 +57,8 @@ class Chip8:
 	def emulate_cycle(self):
 		#Gets opcode
 		self.opcode = self.memory[self.pc] << 8 | self.memory[self.pc + 1]
-		#print(hex(self.opcode))
-		#print(hex(self.pc))
+		print(hex(self.opcode))
+		print(hex(self.pc))
 		#Decodes opcode
 		vx = (self.opcode & 0x0F00) >> 8
 		vy = (self.opcode & 0x00F0) >> 4
@@ -62,8 +66,14 @@ class Chip8:
 
 		#0---
 		if(self.opcode & 0xF000 == 0x0000):
+			#OOEO
+			if(self.opcode == 0x00E0):
+				for i in range(len(self.graphics)):
+					self.graphics[i] = 0
+				self.draw_flag = True
+
 			#OOEE
-			if(self.opcode == 0x00EE):
+			elif(self.opcode == 0x00EE):
 				self.pc = self.stack.pop()	
 			
 			#Not found:
@@ -95,6 +105,7 @@ class Chip8:
 		#7XNN
 		elif(self.opcode & 0xF000 == 0x7000):
 			self.V[vx] += self.opcode & 0x00FF
+			self.V[vx] &= 0xFF
 
 		#8---
 		elif(self.opcode & 0xF000 == 0x8000):
@@ -131,6 +142,10 @@ class Chip8:
 				self.V[vx] -= self.V[vy]
 				self.V[vx] = self.V[vx] & 0xFF
 
+			#8XY6
+			elif(l == 0x0006):
+				self.V[0xF] = self.V[vx] & 0x01
+				self.V[vx] = self.V[vx] >> 1
 
 			else:
 				#Not found
@@ -194,6 +209,17 @@ class Chip8:
 			if(nn == 0x0007):
 				self.V[vx] = self.delay_timer
 
+			#FX0A
+			elif(nn == 0x000A):
+				key = -1
+				for i in range(len(self.keys)):
+					if self.keys[i] == 1:
+						key = i
+						break
+				if key >= 0:
+					self.V[vx] = key	
+				else:		
+					self.pc -= 2
 			#FX15
 			elif(nn == 0x0015):
 				self.delay_timer = self.V[vx]
@@ -201,6 +227,10 @@ class Chip8:
 			#FX18
 			elif(nn == 0x0018):
 				self.sound_timer = self.V[vx]			
+			
+			#FX1E
+			elif(nn == 0x001E):
+				self.I += self.V[vx]			
 
 			#FX29
 			elif(nn == 0x0029):
@@ -211,10 +241,14 @@ class Chip8:
 				self.memory[self.I] = self.V[vx] // 100
 				self.memory[self.I + 1] = (self.V[vx] // 10) % 10
 				self.memory[self.I + 2] = (self.V[vx] % 100) % 10
-			
+		
+			elif(nn == 0x0055):
+				for n in range(vx + 1):
+					self.memory[self.I + n] = self.V[n]			
+
 			#FX65
 			elif(nn == 0x0065):
-				for n in range(vx):
+				for n in range(vx + 1):
 					self.V[n] = self.memory[self.I + n]			
 
 			#Not found
@@ -230,12 +264,17 @@ class Chip8:
 			self.pc -= 2
 
 		self.pc += 2
-		
-		if self.delay_timer > 0:
-			self.delay_timer -= 1
 
-		if self.sound_timer > 0:
-			self.sound_timer -= 1
+		pytime = time()	
+		if pytime - self.t_last >= 1.0/60:
+			if self.delay_timer > 0:
+				self.delay_timer -= 1
+	
+			if self.sound_timer > 0:
+				self.sound_timer -= 1
+			
+			self.t_last = pytime
+		
 
 	def set_keys(self):
 		pass

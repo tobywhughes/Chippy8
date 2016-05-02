@@ -1,9 +1,10 @@
-import sys, pygame, chip8
+import sys, pygame
+import chip8
 from pygame import gfxdraw, Rect
 pygame.init()
 
 #Variables
-def main_func():
+def main_func(file_name):
 	keys=[pygame.K_1, pygame.K_2, pygame.K_3, pygame.K_4, 
               pygame.K_q, pygame.K_w, pygame.K_e, pygame.K_r,
               pygame.K_a, pygame.K_s, pygame.K_d, pygame.K_f,
@@ -24,9 +25,10 @@ def main_func():
 
 	#Initialize chip8 system
 	my_chip8.initialize(pixels)
-	my_chip8.load_game("pong.c8")
+	my_chip8.load_game(file_name)
 
 	#Emulation Loop
+	cycle_speed = 1.0/60
 	while True:
 		for event in pygame.event.get():
 			if event.type == pygame.QUIT: sys.exit()
@@ -49,7 +51,7 @@ def get_key_event(events, keys, my_chip8):
 			event_type = 1	
 		elif event.type == pygame.KEYUP:
 			event_type = 0
-		if event_type != -1:
+		if event_type == 0 or event_type == 1:
 			print(event.key)
 			if event.key in keys:
 				i = keys.index(event.key)
@@ -65,4 +67,9 @@ def draw_graphics(screen, colors, my_chip8, width, height):
 	my_chip8.draw_flag = False
 
 if __name__ == "__main__":
-	main_func()
+	if len(sys.argv) != 2:
+		print("Error: Requires Script And Game.")
+		sys.exit(0)
+	else:
+		file_name = sys.argv[1]
+		main_func(file_name)
